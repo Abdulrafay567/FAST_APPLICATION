@@ -35,7 +35,7 @@ jobs:
 
       - name: Add Hugging Face remote
         run: |
-          git remote add huggingface https://huggingface:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Abdullraffayy/BRC_APP
+          git remote add huggingface https://huggingface:${{ secrets.HF_TOKEN }}@huggingface.co/spaces/Abdullraffayy/Brc_challenges_
 
       - name: Fetch and reset to main
         run: |

@@ -26,7 +26,7 @@ from datasets import load_dataset
 
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
-dataset = load_dataset("AnnsKhan/jan_2024_nyc", split="train")
+dataset = load_dataset("iampalina/nyc_taxi", split="train")
 parquet_path = "jan_2024.parquet"
 if not os.path.exists(parquet_path):
      dataset.to_pandas().to_parquet(parquet_path)  # Save to disk

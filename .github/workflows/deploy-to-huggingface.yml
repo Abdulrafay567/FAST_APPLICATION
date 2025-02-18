@@ -3,7 +3,7 @@ name: Deploy to Hugging Face Spaces
 on:
   push:
     branches:
-      - main  # Change this if your default branch is different
+      - staging  # Change this if your default branch is different
 
 jobs:
   deploy:

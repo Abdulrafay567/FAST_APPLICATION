@@ -20,15 +20,6 @@ import wandb
 from datasets import load_dataset
 from multiprocessing import Pool, cpu_count
 
-# Load dataset once at the start to avoid redundant requests
-wandb.login(key=os.getenv("WANDB_API_KEY"))
-wandb.init(project="billion-row-analysis", name="benchmarking")
-dataset = load_dataset("Rossil/nyc-taxi-data-split", split="train")
-parquet_path = "nyc.parquet"
-if not os.path.exists(parquet_path):
-    dataset.to_pandas().to_parquet(parquet_path)  # Save to disk
-os.environ["MODIN_ENGINE"] = "dask"
-
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -64,25 +55,23 @@ def measure_performance(load_function, *args):
     return data, end_time - start_time, max(end_cpu - start_cpu, 0), max(end_memory - start_memory, 0), peak_memory_percentage
 
 # Data loading functions
-def load_data_python_vectorized():
-    df = pd.read_parquet(parquet_path)
-    
+def load_data_python_vectorized(df):
     # Convert numerical columns to NumPy arrays for vectorized operations
     num_cols = df.select_dtypes(include=['number']).columns
     np_data = {col: df[col].to_numpy() for col in num_cols}
     return np_data
 
-def load_data_pandas():
-    return pd.read_parquet(parquet_path)
+def load_data_pandas(df):
+    return df
 
-def load_data_dask():
-    return dd.read_parquet(parquet_path)
+def load_data_dask(df):
+    return dd.from_pandas(df, npartitions=10)
 
-def load_data_polars():
-    return pl.read_parquet(parquet_path)
+def load_data_polars(df):
+    return pl.from_pandas(df)
 
-def load_data_duckdb():
-    return duckdb.read_parquet(parquet_path)
+def load_data_duckdb(df):
+    return duckdb.from_df(df)
 
 # Loaders list
 loaders = [
@@ -93,13 +82,13 @@ loaders = [
     (load_data_python_vectorized, "Python Vectorized"),
 ]
 
-def run_benchmark():
+def run_benchmark(df):
     benchmark_results = []
     error_messages = []
     
     for loader, lib_name in loaders:
         try:
-            data, load_time, cpu_load, mem_load, peak_mem_load = measure_performance(loader)
+            data, load_time, cpu_load, mem_load, peak_mem_load = measure_performance(loader, df)
 
             # Log metrics to Weights & Biases
             wandb.log({
@@ -148,13 +137,8 @@ def run_benchmark():
     return benchmark_df.to_markdown(), image_array  # Return NumPy array
 
 matplotlib.use("Agg")
-def explore_dataset(file):
+def explore_dataset(df):
     try:
-        if file is not None:
-            df = pd.read_parquet(file.name)
-        else:
-            df = pd.read_parquet(parquet_path)
-
         # Convert float64 columns to float32 to reduce memory usage
         for col in df.select_dtypes(include=['float64']).columns:
             df[col] = df[col].astype('float32')
@@ -200,7 +184,7 @@ def explore_dataset(file):
         if len(num_cols) > 0:
             selected_col = num_cols[0]  # Choose the first numeric column
             sns.histplot(df[selected_col], bins=30, kde=True, ax=axes[1, 0])
-            axes[1, 0].set_title(f"Distribution of pick-up locations ID")
+            axes[1, 0].set_title(f"Distribution of {selected_col}")
             axes[1, 0].set_xlabel(selected_col)
             axes[1, 0].set_ylabel("Frequency")
 
@@ -273,20 +257,15 @@ def multiprocessing_loop(df, column):
 
 # Gradio interface setup
 def gradio_interface():
-    def run_and_plot():
-        results, plot = run_benchmark()
+    def run_and_plot(df):
+        results, plot = run_benchmark(df)
         return results, plot
     
-    def explore_data(file):
-        summary, plot = explore_dataset(file)
+    def explore_data(df):
+        summary, plot = explore_dataset(df)
         return summary, plot    
 
-    def process_data(file, operation, column, condition=None, value=None):
-        if file is not None:
-            df = pd.read_parquet(file.name)
-        else:
-            df = pd.read_parquet(parquet_path)
-
+    def process_data(df, operation, column, condition=None, value=None):
         if operation == "Group By":
             result = group_by_column(df, column)
         elif operation == "Filter":
@@ -300,13 +279,25 @@ def gradio_interface():
 
         return str(result)
 
+    def load_huggingface_dataset(dataset_name):
+        try:
+            dataset = load_dataset(dataset_name, split="train")
+            df = dataset.to_pandas()
+            return df
+        except Exception as e:
+            return f"Error loading dataset: {str(e)}"
+
     with gr.Blocks() as demo:
+        gr.Markdown("## Load Dataset from Hugging Face")
+        dataset_name = gr.Textbox(label="Enter Hugging Face Dataset Name", value="Rossil/nyc-taxi-data-split")
+        load_button = gr.Button("Load Dataset")
+        df_state = gr.State()
+
         gr.Markdown("## Explore Dataset")
-        file_upload = gr.File(label="Choose File", file_types=[".parquet"])
         explore_button = gr.Button("Explore Data")
         summary_text = gr.Textbox(label="Dataset Summary")
         explore_image = gr.Image(label="Feature Distributions")
-        explore_button.click(explore_data, inputs=file_upload, outputs=[summary_text, explore_image])
+        explore_button.click(explore_data, inputs=df_state, outputs=[summary_text, explore_image])
         
         gr.Markdown("## Data Processing")
         operation = gr.Dropdown(["Group By", "Filter", "Pure Python Loop", "Multiprocessing Loop"], label="Operation")
@@ -315,16 +306,22 @@ def gradio_interface():
         value = gr.Number(label="Value (for Filter)")
         process_button = gr.Button("Process Data")
         result_text = gr.Textbox(label="Processing Result")
-        process_button.click(process_data, inputs=[file_upload, operation, column, condition, value], outputs=result_text)
+        process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
         
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         run_button = gr.Button("Run Benchmark")
         result_text_benchmark = gr.Textbox(label="Benchmark Results")
         plot_image = gr.Image(label="Performance Graph")
-        run_button.click(run_and_plot, outputs=[result_text_benchmark, plot_image])
+        run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
+
+        # Load dataset from Hugging Face
+        load_button.click(load_huggingface_dataset, inputs=dataset_name, outputs=df_state)
     return demo
 
-demo = gradio_interface()
+# Initialize W&B
+wandb.login(key=os.getenv("WANDB_API_KEY"))
+wandb.init(project="billion-row-analysis", name="benchmarking")
 
 # Run the Gradio app
+demo = gradio_interface()
 demo.launch(share=False)  # No need for share=True in VS Code, local access is sufficient

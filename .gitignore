@@ -1,0 +1,36 @@
+# Environment Variables and Secrets
+.env
+*.env
+
+
+# Python Bytecode
+__pycache__/
+*.py[cod]
+
+# Virtual Environment
+venv/
+.venv/
+
+# Jupyter Notebook Checkpoints
+.ipynb_checkpoints/
+
+# macOS Specific Files
+.DS_Store
+
+# Windows Thumbs.db
+Thumbs.db
+
+# Logs and Debug Files
+*.log
+
+# Pytest Cache
+.pytest_cache/
+
+# Data Files (Optional)
+
+
+# VSCode Settings (Optional)
+.vscode/
+
+# Gradio Temporary Files
+gradio_tmp/

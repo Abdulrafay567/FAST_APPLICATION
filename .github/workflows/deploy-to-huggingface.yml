@@ -1,0 +1,38 @@
+name: Deploy to Hugging Face
+
+on:
+  push:
+    branches:
+      - main  # Adjust if you want to deploy from a different branch
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v3
+
+      - name: Set up Python
+        uses: actions/setup-python@v4
+        with:
+          python-version: '3.8'  # Adjust to your project's Python version
+
+      - name: Install Requirements
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Hugging Face CLI
+        run: pip install huggingface_hub
+      
+      - name: Login to Hugging Face
+        run: huggingface-cli login --token ${{ secrets.HF_TOKEN }}
+
+      - name: Push to Hugging Face Spaces
+        run: |
+          git config --global user.email "actions@github.com"
+          git config --global user.name "GitHub Actions"
+          huggingface-cli repo create my-hf-space --space sdk:gradio --exist-ok
+          git remote add huggingface https://huggingface.co/spaces/Abdullraffayy/Fast_Application
+          git push huggingface main -f

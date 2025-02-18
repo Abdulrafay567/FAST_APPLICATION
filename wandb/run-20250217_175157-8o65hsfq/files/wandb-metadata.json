@@ -1,0 +1,31 @@
+{
+  "os":  "Windows-10-10.0.19045-SP0",
+  "python":  "CPython 3.13.2",
+  "startedAt":  "2025-02-17T12:51:58.685490Z",
+  "program":  "c:\\Users\\sa computer\\Desktop\\APP_BIllion_rows\\app.py",
+  "codePath":  "app.py",
+  "git":  {
+    "remote":  "https://huggingface.co/spaces/Abdullraffayy/APP_BIllion_rows",
+    "commit":  "9e50a7cb0b0f0edaaba6d75adb35c5886a130fa0"
+  },
+  "email":  "abdullrafayy999@gmail.com",
+  "root":  "C:\\Users\\sa computer\\Desktop\\APP_BIllion_rows",
+  "host":  "DESKTOP-N5GFKF2",
+  "executable":  "C:\\Users\\sa computer\\Desktop\\APP_BIllion_rows\\uv_env\\Scripts\\python.exe",
+  "codePathLocal":  "app.py",
+  "cpu_count":  2,
+  "cpu_count_logical":  4,
+  "disk":  {
+    "/":  {
+      "total":  "127355359232",
+      "used":  "40226873344"
+    }
+  },
+  "memory":  {
+    "total":  "12753920000"
+  },
+  "cpu":  {
+    "count":  2,
+    "countLogical":  4
+  }
+}

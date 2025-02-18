@@ -1,0 +1,12 @@
+gradio 
+pandas
+dask
+polars
+seaborn
+matplotlib
+Pillow
+numpy
+wandb
+python-dotenv
+tabulate
+

@@ -41,6 +41,10 @@ jobs:
         run: |
           git fetch huggingface
           git reset --hard origin/main
+          
+      - name: Remove LFS tracking for missing file
+        run: |
+          git filter-branch -f --index-filter 'git rm --cached --ignore-unmatch data.parquet' -- --all
    
       - name: Push to Hugging Face Hub
         run: |

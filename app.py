@@ -18,12 +18,13 @@ import numpy as np
 import matplotlib
 import wandb
 from datasets import load_dataset
+from multiprocessing import Pool, cpu_count
 
 # Load dataset once at the start to avoid redundant requests
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
-dataset = load_dataset("iampalina/nyc_taxi", split="train")
-parquet_path = "nyc_taxi.parquet"
+dataset = load_dataset("Rossil/nyc-taxi-data-split", split="train")
+parquet_path = "nyc.parquet"
 if not os.path.exists(parquet_path):
     dataset.to_pandas().to_parquet(parquet_path)  # Save to disk
 os.environ["MODIN_ENGINE"] = "dask"
@@ -228,6 +229,48 @@ def explore_dataset(file):
     except Exception as e:
         return f"Error loading data: {str(e)}", None
 
+# New functionality: Group By, Filtering, Pure Python Loop, Multiprocessing
+def group_by_column(df, column):
+    return df.groupby(column).size().reset_index(name='count')
+
+def filter_data(df, column, condition, value):
+    if condition == ">":
+        return df[df[column] > value]
+    elif condition == "<":
+        return df[df[column] < value]
+    elif condition == "==":
+        return df[df[column] == value]
+    elif condition == "!=":
+        return df[df[column] != value]
+    else:
+        return df
+
+def pure_python_loop(df, column):
+    result = {}
+    for value in df[column]:
+        result[value] = result.get(value, 0) + 1
+    return result
+
+def multiprocessing_loop(df, column):
+    def process_chunk(chunk):
+        result = {}
+        for value in chunk:
+            result[value] = result.get(value, 0) + 1
+        return result
+
+    num_cores = cpu_count()
+    chunk_size = len(df) // num_cores
+    chunks = [df[column].iloc[i:i + chunk_size] for i in range(0, len(df), chunk_size)]
+    
+    with Pool(num_cores) as pool:
+        results = pool.map(process_chunk, chunks)
+    
+    final_result = {}
+    for result in results:
+        for key, value in result.items():
+            final_result[key] = final_result.get(key, 0) + value
+    return final_result
+
 # Gradio interface setup
 def gradio_interface():
     def run_and_plot():
@@ -238,6 +281,25 @@ def gradio_interface():
         summary, plot = explore_dataset(file)
         return summary, plot    
 
+    def process_data(file, operation, column, condition=None, value=None):
+        if file is not None:
+            df = pd.read_parquet(file.name)
+        else:
+            df = pd.read_parquet(parquet_path)
+
+        if operation == "Group By":
+            result = group_by_column(df, column)
+        elif operation == "Filter":
+            result = filter_data(df, column, condition, value)
+        elif operation == "Pure Python Loop":
+            result = pure_python_loop(df, column)
+        elif operation == "Multiprocessing Loop":
+            result = multiprocessing_loop(df, column)
+        else:
+            result = "Invalid operation selected."
+
+        return str(result)
+
     with gr.Blocks() as demo:
         gr.Markdown("## Explore Dataset")
         file_upload = gr.File(label="Choose File", file_types=[".parquet"])
@@ -246,13 +308,20 @@ def gradio_interface():
         explore_image = gr.Image(label="Feature Distributions")
         explore_button.click(explore_data, inputs=file_upload, outputs=[summary_text, explore_image])
         
+        gr.Markdown("## Data Processing")
+        operation = gr.Dropdown(["Group By", "Filter", "Pure Python Loop", "Multiprocessing Loop"], label="Operation")
+        column = gr.Textbox(label="Column Name")
+        condition = gr.Dropdown([">", "<", "==", "!="], label="Condition (for Filter)")
+        value = gr.Number(label="Value (for Filter)")
+        process_button = gr.Button("Process Data")
+        result_text = gr.Textbox(label="Processing Result")
+        process_button.click(process_data, inputs=[file_upload, operation, column, condition, value], outputs=result_text)
+        
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
-        
         run_button = gr.Button("Run Benchmark")
-        result_text = gr.Textbox(label="Benchmark Results")
+        result_text_benchmark = gr.Textbox(label="Benchmark Results")
         plot_image = gr.Image(label="Performance Graph")
-        
-        run_button.click(run_and_plot, outputs=[result_text, plot_image])
+        run_button.click(run_and_plot, outputs=[result_text_benchmark, plot_image])
     return demo
 
 demo = gradio_interface()

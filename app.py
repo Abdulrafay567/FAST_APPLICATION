@@ -26,8 +26,8 @@ from datasets import load_dataset
 
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
-dataset = load_dataset("iampalina/nyc_taxi", split="train")
-parquet_path = "jan_2024.parquet"
+dataset = load_dataset("Rossil/nyc-taxi-data-split", split="train")
+parquet_path = "nyc.parquet"
 if not os.path.exists(parquet_path):
      dataset.to_pandas().to_parquet(parquet_path)  # Save to disk
 os.environ["MODIN_ENGINE"] = "dask"
@@ -199,7 +199,7 @@ def explore_dataset():
         # Plot data type distribution
         data_types = df.dtypes.value_counts()
         sns.barplot(x=data_types.index.astype(str), y=data_types.values, ax=axes[0, 0])
-        axes[0, 0].set_title("Column Count by Data Type by AnnsKhan")
+        axes[0, 0].set_title("Column Count by Data Type by Abdul Rafay")
         axes[0, 0].set_ylabel("Count")
         axes[0, 0].set_xlabel("Column Type")
 

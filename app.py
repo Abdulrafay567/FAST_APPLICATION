@@ -19,17 +19,13 @@ import matplotlib
 import wandb
 from datasets import load_dataset
 
-
-
 # Load dataset once at the start to avoid redundant requests
-# dataset = load_dataset("Chendi/NYC_TAXI_FARE_CLEANED")
-
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
-dataset = load_dataset("Rossil/nyc-taxi-data-split", split="train")
-parquet_path = "nyc.parquet"
+dataset = load_dataset("iampalina/nyc_taxi", split="train")
+parquet_path = "nyc_taxi.parquet"
 if not os.path.exists(parquet_path):
-     dataset.to_pandas().to_parquet(parquet_path)  # Save to disk
+    dataset.to_pandas().to_parquet(parquet_path)  # Save to disk
 os.environ["MODIN_ENGINE"] = "dask"
 
 # Initialize FastAPI app
@@ -65,25 +61,6 @@ def measure_performance(load_function, *args):
     peak_memory_percentage = peak_memory / total_memory * 100  # Convert to percentage
     
     return data, end_time - start_time, max(end_cpu - start_cpu, 0), max(end_memory - start_memory, 0), peak_memory_percentage
-
-# # Data loading functions
-# def load_data_python_vectorized():
-#     df = dataset["train"].to_pandas()
-#     num_cols = df.select_dtypes(include=['number']).columns
-#     np_data = {col: df[col].to_numpy() for col in num_cols}
-#     return np_data
-
-# def load_data_pandas():
-#     return dataset["train"].to_pandas()
-
-# def load_data_dask():
-#     return dd.from_pandas(dataset["train"].to_pandas(), npartitions=10)
-
-# def load_data_polars():
-#     return pl.from_pandas(dataset["train"].to_pandas())
-
-# def load_data_duckdb():
-#     return duckdb.from_df(dataset["train"].to_pandas())
 
 # Data loading functions
 def load_data_python_vectorized():
@@ -169,11 +146,13 @@ def run_benchmark():
 
     return benchmark_df.to_markdown(), image_array  # Return NumPy array
 
-
 matplotlib.use("Agg")
-def explore_dataset():
+def explore_dataset(file):
     try:
-        df = pd.read_parquet(parquet_path)
+        if file is not None:
+            df = pd.read_parquet(file.name)
+        else:
+            df = pd.read_parquet(parquet_path)
 
         # Convert float64 columns to float32 to reduce memory usage
         for col in df.select_dtypes(include=['float64']).columns:
@@ -249,23 +228,23 @@ def explore_dataset():
     except Exception as e:
         return f"Error loading data: {str(e)}", None
 
-    
-    # Gradio interface setup
+# Gradio interface setup
 def gradio_interface():
     def run_and_plot():
         results, plot = run_benchmark()
         return results, plot
     
-    def explore_data():
-        summary, plot = explore_dataset()
+    def explore_data(file):
+        summary, plot = explore_dataset(file)
         return summary, plot    
 
     with gr.Blocks() as demo:
         gr.Markdown("## Explore Dataset")
+        file_upload = gr.File(label="Choose File", file_types=[".parquet"])
         explore_button = gr.Button("Explore Data")
         summary_text = gr.Textbox(label="Dataset Summary")
         explore_image = gr.Image(label="Feature Distributions")
-        explore_button.click(explore_data, outputs=[summary_text, explore_image])
+        explore_button.click(explore_data, inputs=file_upload, outputs=[summary_text, explore_image])
         
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         

@@ -1,10 +1,10 @@
 ---
-title: APP BIllion Rows
-emoji: 🔥
-colorFrom: indigo
-colorTo: purple
+title: BRC APP
+emoji: 🚀
+colorFrom: blue
+colorTo: green
 sdk: gradio
-sdk_version: 5.16.0
+sdk_version: 5.16.1
 app_file: app.py
 pinned: false
 ---

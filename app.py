@@ -319,9 +319,10 @@ def gradio_interface():
         explore_image = gr.Image(label="Feature Distributions")
 
         def update_dataset(selected_dataset):
-            df = load_selected_dataset(selected_dataset)
-            df_state.value = df  # ✅ Store dataset in state
-            return f"Dataset '{selected_dataset}' loaded successfully."
+         df = load_selected_dataset(selected_dataset)
+         if isinstance(df, str):  # If an error occurs
+          return df, None  # Return error message and keep df_state unchanged
+         return f"Dataset '{selected_dataset}' loaded successfully.", df
 
         load_button.click(update_dataset, inputs=dataset_dropdown, outputs=summary_text)
 

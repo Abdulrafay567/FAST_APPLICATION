@@ -270,7 +270,7 @@ def load_selected_dataset(dataset_key):
 
 # Function to explore dataset
 def explore_data(df):
-    def explore_dataset():
+    
     try:
         df = pd.read_parquet(parquet_path)
 

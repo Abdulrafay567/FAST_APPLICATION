@@ -323,19 +323,20 @@ def gradio_interface():
 
         # Data Processing
         gr.Markdown("## Data Processing")
+        process_button = gr.Button("Process Data")
         operation = gr.Dropdown(["Group By", "Filter", "Pure Python Loop", "Multiprocessing Loop"], label="Operation")
         column = gr.Textbox(label="Column Name")
         condition = gr.Dropdown([">", "<", "==", "!="], label="Condition (for Filter)", interactive=True)
         value = gr.Number(label="Value (for Filter)", interactive=True)
-        process_button = gr.Button("Process Data")
         result_text = gr.Dataframe(label="Processing Result")
         process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
 
         # Benchmarking
-        run_button = gr.Button("Run Benchmark")
+        
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         run_button = gr.Button("Run Benchmark")
-        result_text_benchmark = gr.Dataframe(label="Benchmark Results")
+        run_button = gr.Button("Run Benchmark")
+        result_text_benchmark = gr.Dataframe(label="Benchmark Results", wrap=True)
         plot_image = gr.Image(label="Performance Graph")
         run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
 

@@ -302,6 +302,7 @@ def gradio_interface():
 
         dataset_dropdown = gr.Dropdown(choices=list(DATASET_OPTIONS.keys()), label="Select Dataset")
         load_button = gr.Button("Load Dataset")
+        explore_button = gr.Button("Explore Data")
         df_state = gr.State(None)  # Initialize df_state properly
 
         # Load Dataset
@@ -318,7 +319,7 @@ def gradio_interface():
 
         # Explore Dataset
         gr.Markdown("## Explore Dataset")
-        explore_button = gr.Button("Explore Data")
+        #explore_button = gr.Button("Explore Data")
         explore_button.click(explore_data, inputs=df_state, outputs=[summary_text, explore_image])
 
         # Data Processing
@@ -335,7 +336,7 @@ def gradio_interface():
         
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         run_button = gr.Button("Run Benchmark")
-        run_button = gr.Button("Run Benchmark")
+        
         result_text_benchmark = gr.Dataframe(label="Benchmark Results", wrap=True)
         plot_image = gr.Image(label="Performance Graph")
         run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])

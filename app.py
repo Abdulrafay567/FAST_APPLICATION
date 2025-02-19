@@ -270,9 +270,83 @@ def load_selected_dataset(dataset_key):
 
 # Function to explore dataset
 def explore_data(df):
-    if df is None:
-        return "Error: No dataset loaded.", None
-    return df.describe().to_markdown(), None
+    def explore_dataset():
+    try:
+        df = pd.read_parquet(parquet_path)
+
+        # Convert float64 columns to float32 to reduce memory usage
+        for col in df.select_dtypes(include=['float64']).columns:
+            df[col] = df[col].astype('float32')
+
+        # If dataset is too large, sample 10%
+        if len(df) > 1_000_000:
+            df = df.sample(frac=0.5, random_state=42)
+
+        # Generate dataset summary
+        summary = df.describe(include='all').T  
+        summary["missing_values"] = df.isnull().sum()
+        summary["unique_values"] = df.nunique()
+        summary_text = summary.to_markdown()
+        
+        # Log dataset summary as text in Weights & Biases
+        wandb.log({"Dataset Summary": wandb.Html(summary_text)})
+
+        # Prepare for visualization
+        fig, axes = plt.subplots(2, 2, figsize=(16, 10))  
+        fig.suptitle("Dataset Overview", fontsize=16)
+
+        # Plot data type distribution
+        data_types = df.dtypes.value_counts()
+        sns.barplot(x=data_types.index.astype(str), y=data_types.values, ax=axes[0, 0])
+        axes[0, 0].set_title("Column Count by Data Type by AnnsKhan")
+        axes[0, 0].set_ylabel("Count")
+        axes[0, 0].set_xlabel("Column Type")
+
+        # Plot mean values of numeric columns
+        num_cols = df.select_dtypes(include=['number']).columns
+        if len(num_cols) > 0:
+            mean_values = df[num_cols].mean()
+            sns.barplot(x=mean_values.index, y=mean_values.values, ax=axes[0, 1])
+            axes[0, 1].set_title("Mean Values of Numeric Columns")
+            axes[0, 1].set_xlabel("Column Name")
+            axes[0, 1].tick_params(axis='x', rotation=45)
+
+            # Log mean values to Weights & Biases
+            for col, mean_val in mean_values.items():
+                wandb.log({f"Mean Values/{col}": mean_val})
+
+        # Plot histogram for a selected numerical column
+        if len(num_cols) > 0:
+            selected_col = num_cols[0]  # Choose the first numeric column
+            sns.histplot(df[selected_col], bins=30, kde=True, ax=axes[1, 0])
+            axes[1, 0].set_title(f"Distribution of pick-up locations ID")
+            axes[1, 0].set_xlabel(selected_col)
+            axes[1, 0].set_ylabel("Frequency")
+
+        # Plot correlation heatmap
+        if len(num_cols) > 1:
+            corr = df[num_cols].corr()
+            sns.heatmap(corr, annot=True, cmap="coolwarm", fmt=".2f", linewidths=0.5, ax=axes[1, 1])
+            axes[1, 1].set_title("Correlation Heatmap")
+
+        # Save figure to buffer
+        buf = io.BytesIO()
+        plt.tight_layout()
+        plt.savefig(buf, format='png', bbox_inches='tight')
+        plt.close(fig)
+        buf.seek(0)
+
+        # Convert figure to NumPy array
+        image = Image.open(buf)
+        image_array = np.array(image)
+
+        # Log image to Weights & Biases
+        wandb.log({"Dataset Overview": wandb.Image(image)})
+
+        return summary_text, image_array
+
+    except Exception as e:
+        return f"Error loading data: {str(e)}", None
 
 # Function to process data
 def process_data(df, operation, column, condition=None, value=None):
@@ -315,11 +389,12 @@ def gradio_interface():
             return f"Dataset '{selected_dataset}' loaded successfully.", df
 
         load_button.click(update_dataset, inputs=dataset_dropdown, outputs=[summary_text, df_state])
-
-        # Explore Dataset
+        #Explore Dataset
         gr.Markdown("## Explore Dataset")
         explore_button = gr.Button("Explore Data")
-        explore_button.click(explore_data, inputs=df_state, outputs=[summary_text, explore_image])
+        summary_text = gr.Textbox(label="Dataset Summary")
+        explore_image = gr.Image(label="Feature Distributions")
+        explore_button.click(explore_data, outputs=[summary_text, explore_image])
 
         # Data Processing
         gr.Markdown("## Data Processing")
@@ -343,7 +418,6 @@ def gradio_interface():
 # Initialize W&B
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
-
 
 # Run the Gradio app
 demo = gradio_interface()

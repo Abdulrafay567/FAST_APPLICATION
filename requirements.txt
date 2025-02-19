@@ -13,3 +13,4 @@ mlflow
 fastapi
 gradio
 pytest
+tabulate

@@ -134,8 +134,9 @@ def run_benchmark(df):
 matplotlib.use("Agg")
 def explore_dataset(df):
     try:
+        df = pd.read_parquet(parquet_path)
         # Convert float64 columns to float32 to reduce memory usage
-        for col in df.select_dtypes(include=['float64']).columns:
+        for col in df.select_dtypes(include=['float32']).columns:
             df[col] = df[col].astype('float32')
 
         # If dataset is too large, sample 10%

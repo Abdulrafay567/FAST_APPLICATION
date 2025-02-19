@@ -345,3 +345,5 @@ wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
 
 # Run the Grad
+demo = gradio_interface()
+demo.launch()

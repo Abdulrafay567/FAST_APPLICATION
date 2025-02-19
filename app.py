@@ -328,14 +328,14 @@ def gradio_interface():
         column = gr.Textbox(label="Column Name")
         condition = gr.Dropdown([">", "<", "==", "!="], label="Condition (for Filter)", interactive=True)
         value = gr.Number(label="Value (for Filter)", interactive=True)
-        result_text = gr.Dataframe(label="Processing Result")
+        result_text = gr.Textbook(label="Processing Result")
         process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
 
         # Benchmarking
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         run_button = gr.Button("Run Benchmark")
         
-        result_text_benchmark = gr.Dataframe(label="Benchmark Results")
+        result_text_benchmark = gr.Textbox(label="Benchmark Results")
         plot_image = gr.Image(label="Performance Graph")
         run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
 

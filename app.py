@@ -20,7 +20,7 @@ import wandb
 from datasets import load_dataset
 from multiprocessing import Pool, cpu_count
 from datasets import load_dataset
-
+from tabulate import tabulate 
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -129,7 +129,7 @@ def run_benchmark(df):
 
     image_array = np.array(image)
 
-    return benchmark_df.to_markdown(), image_array  # Return NumPy array
+    return tabulate(benchmark_df, headers='keys', tablefmt='pretty'), image_array  # Return NumPy array
 
 matplotlib.use("Agg")
 def explore_dataset(df):
@@ -146,7 +146,7 @@ def explore_dataset(df):
         summary = df.describe(include='all').T  
         summary["missing_values"] = df.isnull().sum()
         summary["unique_values"] = df.nunique()
-        summary_text = summary.to_markdown()
+        summary_text = tabulate(summary, headers='keys', tablefmt='pretty')
         
         # Log dataset summary as text in Weights & Biases
         wandb.log({"Dataset Summary": wandb.Html(summary_text)})
@@ -335,7 +335,7 @@ def gradio_interface():
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         run_button = gr.Button("Run Benchmark")
         
-        result_text_benchmark = gr.Dataframe(label="Benchmark Results", wrap=True)
+        result_text_benchmark = gr.Dataframe(label="Benchmark Results")
         plot_image = gr.Image(label="Performance Graph")
         run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
 

@@ -20,7 +20,8 @@ import wandb
 from datasets import load_dataset
 from multiprocessing import Pool, cpu_count
 from datasets import load_dataset
-from tabulate import tabulate 
+from tabulate import tabulate
+
 # Initialize FastAPI app
 app = FastAPI()
 
@@ -278,15 +279,22 @@ def explore_data(df):
 def process_data(df, operation, column, condition=None, value=None):
     if isinstance(df, str):  # Handle error messages
         return df
-    if operation == "Group By":
-        return group_by_column(df, column)
-    elif operation == "Filter":
-        return filter_data(df, column, condition, value)
-    elif operation == "Pure Python Loop":
-        return pd.DataFrame(list(pure_python_loop(df, column).items()), columns=[column, "Count"])
-    elif operation == "Multiprocessing Loop":
-        return pd.DataFrame(list(multiprocessing_loop(df, column).items()), columns=[column, "Count"])
-    return "Invalid operation selected."
+    try:
+        if operation == "Group By":
+            result = group_by_column(df, column)
+        elif operation == "Filter":
+            if condition is None or value is None:
+                return "Condition and value must be provided for filtering."
+            result = filter_data(df, column, condition, value)
+        elif operation == "Pure Python Loop":
+            result = pd.DataFrame(list(pure_python_loop(df, column).items()), columns=[column, "Count"])
+        elif operation == "Multiprocessing Loop":
+            result = pd.DataFrame(list(multiprocessing_loop(df, column).items()), columns=[column, "Count"])
+        else:
+            return "Invalid operation selected."
+        return result
+    except Exception as e:
+        return f"Error processing data: {str(e)}"
 
 # Function to run and plot benchmark
 def run_and_plot(df):
@@ -328,7 +336,7 @@ def gradio_interface():
         column = gr.Textbox(label="Column Name")
         condition = gr.Dropdown([">", "<", "==", "!="], label="Condition (for Filter)", interactive=True)
         value = gr.Number(label="Value (for Filter)", interactive=True)
-        result_text = gr.Textbook(label="Processing Result")
+        result_text = gr.Textbox(label="Processing Result")
         process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
 
         # Benchmarking

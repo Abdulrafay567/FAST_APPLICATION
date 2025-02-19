@@ -344,6 +344,7 @@ def gradio_interface():
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
 
+
 # Run the Gradio app
 demo = gradio_interface()
 demo.launch(share=False)  # No need for share=True in VS Code, local access is sufficient

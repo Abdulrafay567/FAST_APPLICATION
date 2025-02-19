@@ -38,30 +38,23 @@ def measure_performance(load_function, *args):
     tracemalloc.start()
     start_time = time.time()
     start_cpu = psutil.cpu_percent(interval=1)
+    total_memory = psutil.virtual_memory().total
+    start_memory = psutil.Process().memory_info().rss / total_memory * 100
     
-    total_memory = psutil.virtual_memory().total  # Get total system memory
-    
-    start_memory = psutil.Process().memory_info().rss / total_memory * 100  # Convert to percentage
     data = load_function(*args)
-    end_memory = psutil.Process().memory_info().rss / total_memory * 100  # Convert to percentage
     
+    end_memory = psutil.Process().memory_info().rss / total_memory * 100
     end_cpu = psutil.cpu_percent(interval=1)
     end_time = time.time()
     
     _, peak_memory = tracemalloc.get_traced_memory()
     tracemalloc.stop()
     
-    peak_memory_percentage = peak_memory / total_memory * 100  # Convert to percentage
+    peak_memory_percentage = peak_memory / total_memory * 100
     
     return data, end_time - start_time, max(end_cpu - start_cpu, 0), max(end_memory - start_memory, 0), peak_memory_percentage
 
 # Data loading functions
-def load_data_python_vectorized(df):
-    # Convert numerical columns to NumPy arrays for vectorized operations
-    num_cols = df.select_dtypes(include=['number']).columns
-    np_data = {col: df[col].to_numpy() for col in num_cols}
-    return np_data
-
 def load_data_pandas(df):
     return df
 
@@ -73,7 +66,11 @@ def load_data_polars(df):
 
 def load_data_duckdb(df):
     return duckdb.from_df(df)
-    
+
+def load_data_python_vectorized(df):
+    num_cols = df.select_dtypes(include=['number']).columns
+    np_data = {col: df[col].to_numpy() for col in num_cols}
+    return np_data
 
 # Loaders list
 loaders = [
@@ -101,21 +98,16 @@ def run_benchmark(df):
                 "Peak Memory (%)": peak_mem_load
             })
 
-            benchmark_results.append({
-                "Library": lib_name,
-                "Load Time (s)": load_time,
-                "CPU Load (%)": cpu_load,
-                "Memory Load (%)": mem_load,
-                "Peak Memory (%)": peak_mem_load
-            })
-
+            benchmark_results = []
+    for loader, lib_name in loaders:
+        try:
+            data, load_time, cpu_load, mem_load, peak_mem_load = measure_performance(loader, df)
+            wandb.log({"Library": lib_name, "Load Time (s)": load_time})
+            benchmark_results.append({"Library": lib_name, "Load Time (s)": load_time})
         except Exception as e:
-            error_messages.append(f"{lib_name} Error: {str(e)}")
-
-    if error_messages:
-        return '\n'.join(error_messages), None
-
-    benchmark_df = pd.DataFrame(benchmark_results)
+            benchmark_results.append({"Library": lib_name, "Error": str(e)})
+    
+        return pd.DataFrame(benchmark_results).to_markdown(), None
 
     sns.set(style="whitegrid")
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
@@ -279,10 +271,9 @@ def load_selected_dataset(dataset_key):
 
 # Function to explore dataset
 def explore_data(df):
-    if isinstance(df, str):  # Handle error messages
-        return df, None
-    summary, plot = explore_dataset(df)
-    return summary, plot    
+    if df is None:
+        return "Error: No dataset loaded.", None
+    return df.describe().to_markdown(), None
 
 # Function to process data
 def process_data(df, operation, column, condition=None, value=None):
@@ -319,12 +310,12 @@ def gradio_interface():
         explore_image = gr.Image(label="Feature Distributions")
 
         def update_dataset(selected_dataset):
-         df = load_selected_dataset(selected_dataset)
-         if isinstance(df, str):  # If an error occurs
-          return df, None  # Return error message and keep df_state unchanged
-         return f"Dataset '{selected_dataset}' loaded successfully.", df
+            df = load_selected_dataset(selected_dataset)
+            if isinstance(df, str):  # If an error occurs
+                return df, None  # Return error message and keep df_state unchanged
+            return f"Dataset '{selected_dataset}' loaded successfully.", df
 
-        load_button.click(update_dataset, inputs=dataset_dropdown, outputs=summary_text)
+        load_button.click(update_dataset, inputs=dataset_dropdown, outputs=[summary_text, df_state])
 
         # Explore Dataset
         gr.Markdown("## Explore Dataset")
@@ -350,14 +341,10 @@ def gradio_interface():
 
     return demo
 
-
 # Initialize W&B
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
 
 # Run the Gradio app
-
-
-
 demo = gradio_interface()
 demo.launch(share=False)  # No need for share=True in VS Code, local access is sufficient

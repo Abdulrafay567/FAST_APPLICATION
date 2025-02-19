@@ -304,8 +304,27 @@ def run_and_plot(df):
     return results, plot
 
 # Gradio Interface
+import gradio as gr
+
 def gradio_interface():
-    with gr.Blocks() as demo:
+    custom_css = """
+    .result-box {
+        border: 2px solid #4CAF50;
+        padding: 10px;
+        border-radius: 5px;
+        background-color: #f9f9f9;
+        margin-top: 10px;
+    }
+    .plot-image {
+        max-width: 100%;
+        height: auto;
+        border: 1px solid #ddd;
+        border-radius: 4px;
+        padding: 5px;
+    }
+    """
+
+    with gr.Blocks(css=custom_css) as demo:
         gr.Markdown("## Select a Dataset from Hugging Face Hub")
 
         dataset_dropdown = gr.Dropdown(choices=list(DATASET_OPTIONS.keys()), label="Select Dataset")
@@ -346,6 +365,22 @@ def gradio_interface():
         result_text_benchmark = gr.Textbox(label="Benchmark Results")
         plot_image = gr.Image(label="Performance Graph")
         run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
+
+        # Custom HTML for displaying benchmark results
+        gr.HTML("""
+        <div class="result-box">
+            <h3>Benchmark Results</h3>
+            <p id="benchmark-results"></p>
+        </div>
+        """)
+
+        # Custom HTML for displaying the performance graph
+        gr.HTML("""
+        <div class="result-box">
+            <h3>Performance Graph</h3>
+            <img id="performance-graph" class="plot-image" src="" alt="Performance Graph">
+        </div>
+        """)
 
     return demo
 

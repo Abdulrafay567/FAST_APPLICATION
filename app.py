@@ -278,9 +278,8 @@ def gradio_interface():
             result = multiprocessing_loop(df, column)
         else:
             result = "Invalid operation selected."
-
         return str(result)
-
+    
     def load_huggingface_dataset(dataset_name):
         try:
             dataset = load_dataset(dataset_name, split="train")
@@ -297,7 +296,12 @@ def gradio_interface():
         "Titanic Dataset": "Kaggle/titanic",
          }
 
- 
+    with gr.Blocks() as demo:
+     gr.Markdown("## Select a Dataset from Hugging Face Hub")
+
+    dataset_dropdown = gr.Dropdown(choices=list(DATASET_OPTIONS.keys()), label="Select Dataset")
+    load_button = gr.Button("Load Dataset")
+    df_state = gr.State(None)  # ✅ Initialize df_state properly
     def load_selected_dataset(dataset_key):
      try:
         dataset_name = DATASET_OPTIONS[dataset_key]

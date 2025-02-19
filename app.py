@@ -98,16 +98,17 @@ def run_benchmark(df):
                 "Peak Memory (%)": peak_mem_load
             })
 
-            benchmark_results = []
-    for loader, lib_name in loaders:
-        try:
-            data, load_time, cpu_load, mem_load, peak_mem_load = measure_performance(loader, df)
-            wandb.log({"Library": lib_name, "Load Time (s)": load_time})
-            benchmark_results.append({"Library": lib_name, "Load Time (s)": load_time})
+            benchmark_results.append({
+                "Library": lib_name,
+                "Load Time (s)": load_time,
+                "CPU Load (%)": cpu_load,
+                "Memory Load (%)": mem_load,
+                "Peak Memory (%)": peak_mem_load
+            })
         except Exception as e:
             benchmark_results.append({"Library": lib_name, "Error": str(e)})
-    
-        return pd.DataFrame(benchmark_results).to_markdown(), None
+
+    benchmark_df = pd.DataFrame(benchmark_results)
 
     sns.set(style="whitegrid")
     fig, axes = plt.subplots(2, 2, figsize=(14, 10))
@@ -249,8 +250,6 @@ def multiprocessing_loop(df, column):
             final_result[key] = final_result.get(key, 0) + value
     return final_result
 
-
-
 # Dataset options from Hugging Face
 DATASET_OPTIONS = {
     "NYC Taxi Data": "iampalina/nyc_taxi",
@@ -303,7 +302,7 @@ def gradio_interface():
 
         dataset_dropdown = gr.Dropdown(choices=list(DATASET_OPTIONS.keys()), label="Select Dataset")
         load_button = gr.Button("Load Dataset")
-        df_state = gr.State(None)  # ✅ Initialize df_state properly
+        df_state = gr.State(None)  # Initialize df_state properly
 
         # Load Dataset
         summary_text = gr.Textbox(label="Dataset Summary")

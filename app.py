@@ -19,6 +19,7 @@ import matplotlib
 import wandb
 from datasets import load_dataset
 from multiprocessing import Pool, cpu_count
+from datasets import load_dataset
 
 # Initialize FastAPI app
 app = FastAPI()
@@ -287,36 +288,49 @@ def gradio_interface():
             return df
         except Exception as e:
             return f"Error loading dataset: {str(e)}"
-
-    with gr.Blocks() as demo:
-        gr.Markdown("## Load Dataset from Hugging Face")
-        dataset_name = gr.Textbox(label="Enter Hugging Face Dataset Name", value="Rossil/nyc-taxi-data-split")
-        load_button = gr.Button("Load Dataset")
-        df_state = gr.State()
-
-        gr.Markdown("## Explore Dataset")
-        explore_button = gr.Button("Explore Data")
-        summary_text = gr.Textbox(label="Dataset Summary")
-        explore_image = gr.Image(label="Feature Distributions")
-        explore_button.click(explore_data, inputs=df_state, outputs=[summary_text, explore_image])
         
-        gr.Markdown("## Data Processing")
-        operation = gr.Dropdown(["Group By", "Filter", "Pure Python Loop", "Multiprocessing Loop"], label="Operation")
-        column = gr.Textbox(label="Column Name")
-        condition = gr.Dropdown([">", "<", "==", "!="], label="Condition (for Filter)")
-        value = gr.Number(label="Value (for Filter)")
-        process_button = gr.Button("Process Data")
-        result_text = gr.Textbox(label="Processing Result")
-        process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
+    DATASET_OPTIONS = {
+        "NYC Taxi Data": "iampalina/nyc_taxi",
+        "IMDB Reviews": "imdb",
+        "Amazon Reviews": "amazon_polarity",
+        "Hate Speech": "hate_speech18",
+        "Titanic Dataset": "Kaggle/titanic",
+         }
+
+ 
+    def load_selected_dataset(dataset_key):
+     try:
+        dataset_name = DATASET_OPTIONS[dataset_key]
+        dataset = load_dataset(dataset_name, split="train")
+        df = dataset.to_pandas()
+        return df
+     except Exception as e:
+        return f"Error loading dataset: {str(e)}"
+
+
+    gr.Markdown("## Explore Dataset")
+    explore_button = gr.Button("Explore Data")
+    summary_text = gr.Textbox(label="Dataset Summary")
+    explore_image = gr.Image(label="Feature Distributions")
+    explore_button.click(explore_data, inputs=df_state, outputs=[summary_text, explore_image])
         
-        gr.Markdown("## Benchmarking Different Data Loading Libraries")
-        run_button = gr.Button("Run Benchmark")
-        result_text_benchmark = gr.Textbox(label="Benchmark Results")
-        plot_image = gr.Image(label="Performance Graph")
-        run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
+    gr.Markdown("## Data Processing")
+    operation = gr.Dropdown(["Group By", "Filter", "Pure Python Loop", "Multiprocessing Loop"], label="Operation")
+    column = gr.Textbox(label="Column Name")
+    condition = gr.Dropdown([">", "<", "==", "!="], label="Condition (for Filter)")
+    value = gr.Number(label="Value (for Filter)")
+    process_button = gr.Button("Process Data")
+    result_text = gr.Textbox(label="Processing Result")
+    process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
+        
+    gr.Markdown("## Benchmarking Different Data Loading Libraries")
+    run_button = gr.Button("Run Benchmark")
+    result_text_benchmark = gr.Textbox(label="Benchmark Results")
+    plot_image = gr.Image(label="Performance Graph")
+    run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
 
         # Load dataset from Hugging Face
-        load_button.click(load_huggingface_dataset, inputs=dataset_name, outputs=df_state)
+    load_button.click(load_huggingface_dataset, inputs=dataset_name, outputs=df_state)
     return demo
 
 # Initialize W&B

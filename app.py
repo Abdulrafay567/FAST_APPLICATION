@@ -270,8 +270,8 @@ def load_selected_dataset(dataset_key):
 
 # Function to explore dataset
 def explore_data(df):
-    if df is None:
-        return "Error: No dataset loaded.", None
+    if isinstance(df, str):  # Handle error messages
+        return df, None
     return explore_dataset(df)
 
 # Function to process data
@@ -279,13 +279,13 @@ def process_data(df, operation, column, condition=None, value=None):
     if isinstance(df, str):  # Handle error messages
         return df
     if operation == "Group By":
-        return str(group_by_column(df, column))
+        return group_by_column(df, column)
     elif operation == "Filter":
-        return str(filter_data(df, column, condition, value))
+        return filter_data(df, column, condition, value)
     elif operation == "Pure Python Loop":
-        return str(pure_python_loop(df, column))
+        return pd.DataFrame(list(pure_python_loop(df, column).items()), columns=[column, "Count"])
     elif operation == "Multiprocessing Loop":
-        return str(multiprocessing_loop(df, column))
+        return pd.DataFrame(list(multiprocessing_loop(df, column).items()), columns=[column, "Count"])
     return "Invalid operation selected."
 
 # Function to run and plot benchmark
@@ -319,7 +319,6 @@ def gradio_interface():
 
         # Explore Dataset
         gr.Markdown("## Explore Dataset")
-        #explore_button = gr.Button("Explore Data")
         explore_button.click(explore_data, inputs=df_state, outputs=[summary_text, explore_image])
 
         # Data Processing
@@ -333,7 +332,6 @@ def gradio_interface():
         process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
 
         # Benchmarking
-        
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         run_button = gr.Button("Run Benchmark")
         
@@ -347,6 +345,6 @@ def gradio_interface():
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")
 
-# Run the Grad
+# Run the Gradio interface
 demo = gradio_interface()
 demo.launch()

@@ -32,10 +32,6 @@ app.add_middleware(
 )
 
 # Performance measurement function
-# Performance measurement function
-
-
-# Performance measurement function
 def measure_performance(load_function, *args):
     gc.collect()
     tracemalloc.start()
@@ -60,19 +56,10 @@ def measure_performance(load_function, *args):
 
 # Data loading functions
 def load_data_python_vectorized(df):
+    # Convert numerical columns to NumPy arrays for vectorized operations
     num_cols = df.select_dtypes(include=['number']).columns
     np_data = {col: df[col].to_numpy() for col in num_cols}
     return np_data
-
-def load_data_python(df):
-    return {col: list(df[col]) for col in df.columns}
-
-def load_data_python_multiprocessing(df):
-    def process_column(col):
-        return list(df[col])
-    with Pool(cpu_count()) as pool:
-        result = pool.map(process_column, df.columns)
-    return dict(zip(df.columns, result))
 
 def load_data_pandas(df):
     return df
@@ -85,6 +72,7 @@ def load_data_polars(df):
 
 def load_data_duckdb(df):
     return duckdb.from_df(df)
+    
 
 # Loaders list
 loaders = [
@@ -93,8 +81,6 @@ loaders = [
     (load_data_polars, "Polars"),
     (load_data_duckdb, "DuckDB"),
     (load_data_python_vectorized, "Python Vectorized"),
-    (load_data_python, "Pure Python"),
-    (load_data_python_multiprocessing, "Python Multiprocessing"),
 ]
 
 def run_benchmark(df):
@@ -104,7 +90,8 @@ def run_benchmark(df):
     for loader, lib_name in loaders:
         try:
             data, load_time, cpu_load, mem_load, peak_mem_load = measure_performance(loader, df)
-            
+
+            # Log metrics to Weights & Biases
             wandb.log({
                 "Library": lib_name,
                 "Load Time (s)": load_time,
@@ -112,7 +99,7 @@ def run_benchmark(df):
                 "Memory Load (%)": mem_load,
                 "Peak Memory (%)": peak_mem_load
             })
-            
+
             benchmark_results.append({
                 "Library": lib_name,
                 "Load Time (s)": load_time,
@@ -142,14 +129,15 @@ def run_benchmark(df):
     plt.savefig(buf, format='png')
     buf.seek(0)
     
+    # Convert plot to an image and log it to wandb
     image = Image.open(buf)
     wandb.log({"Benchmark Results": wandb.Image(image)})
 
     image_array = np.array(image)
 
-    return benchmark_df.to_markdown(), image_array
+    return benchmark_df.to_markdown(), image_array  # Return NumPy array
 
-
+matplotlib.use("Agg")
 def explore_dataset(df):
     try:
         # Convert float64 columns to float32 to reduce memory usage
@@ -312,14 +300,15 @@ def gradio_interface():
         explore_image = gr.Image(label="Feature Distributions")
         explore_button.click(explore_data, inputs=df_state, outputs=[summary_text, explore_image])
         
-        gr.Markdown("## Benchmarking Different Data Loading Libraries")
-        run_button = gr.Button("Run Benchmark")
-        result_text_benchmark = gr.Textbox(label="Benchmark Results")
-        plot_image = gr.Image(label="Performance Graph")
-        run_button.click(run_benchmark, inputs=df_state, outputs=[result_text_benchmark, plot_image])
-
-        load_button.click(load_huggingface_dataset, inputs=dataset_name, outputs=df_state)
-
+        gr.Markdown("## Data Processing")
+        operation = gr.Dropdown(["Group By", "Filter", "Pure Python Loop", "Multiprocessing Loop"], label="Operation")
+        column = gr.Textbox(label="Column Name")
+        condition = gr.Dropdown([">", "<", "==", "!="], label="Condition (for Filter)")
+        value = gr.Number(label="Value (for Filter)")
+        process_button = gr.Button("Process Data")
+        result_text = gr.Textbox(label="Processing Result")
+        process_button.click(process_data, inputs=[df_state, operation, column, condition, value], outputs=result_text)
+        
         gr.Markdown("## Benchmarking Different Data Loading Libraries")
         run_button = gr.Button("Run Benchmark")
         result_text_benchmark = gr.Textbox(label="Benchmark Results")

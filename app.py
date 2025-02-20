@@ -390,6 +390,7 @@ def gradio_interface():
 
     return demo
 
+
 # Initialize W&B
 wandb.login(key=os.getenv("WANDB_API_KEY"))
 wandb.init(project="billion-row-analysis", name="benchmarking")

@@ -303,6 +303,8 @@ def run_and_plot(df):
     results, plot = run_benchmark(df)
     return results, plot
 
+# Gradio interface
+
 # Gradio Interface
 import gradio as gr
 
@@ -321,6 +323,26 @@ def gradio_interface():
         border: 1px solid #ddd;
         border-radius: 4px;
         padding: 5px;
+    }
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 10px;
+    }
+    .data-table th, .data-table td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+    }
+    .data-table th {
+        background-color: #4CAF50;
+        color: white;
+    }
+    .data-table tr:nth-child(even) {
+        background-color: #f2f2f2;
+    }
+    .data-table tr:hover {
+        background-color: #ddd;
     }
     """
 
@@ -365,22 +387,6 @@ def gradio_interface():
         result_text_benchmark = gr.Textbox(label="Benchmark Results")
         plot_image = gr.Image(label="Performance Graph")
         run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
-
-        # Custom HTML for displaying benchmark results
-        gr.HTML("""
-        <div class="result-box">
-            <h3>Benchmark Results</h3>
-            <p id="benchmark-results"></p>
-        </div>
-        """)
-
-        # Custom HTML for displaying the performance graph
-        gr.HTML("""
-        <div class="result-box">
-            <h3>Performance Graph</h3>
-            <img id="performance-graph" class="plot-image" src="" alt="Performance Graph">
-        </div>
-        """)
 
     return demo
 

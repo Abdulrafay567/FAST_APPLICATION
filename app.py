@@ -306,6 +306,7 @@ def run_and_plot(df):
 # Gradio interface
 
 # Gradio Interface
+
 import gradio as gr
 
 def gradio_interface():
@@ -357,14 +358,15 @@ def gradio_interface():
         # Load Dataset
         summary_text = gr.Textbox(label="Dataset Summary")
         explore_image = gr.Image(label="Feature Distributions")
+        data_table = gr.Dataframe(label="Dataset Preview")  # Add a Dataframe component to display the table
 
         def update_dataset(selected_dataset):
             df = load_selected_dataset(selected_dataset)
             if isinstance(df, str):  # If an error occurs
-                return df, None  # Return error message and keep df_state unchanged
-            return f"Dataset '{selected_dataset}' loaded successfully.", df
+                return df, None, None  # Return error message and keep df_state unchanged
+            return f"Dataset '{selected_dataset}' loaded successfully.", df, df.head(10)  # Return summary, df_state, and table preview
 
-        load_button.click(update_dataset, inputs=dataset_dropdown, outputs=[summary_text, df_state])
+        load_button.click(update_dataset, inputs=dataset_dropdown, outputs=[summary_text, df_state, data_table])
 
         # Explore Dataset
         gr.Markdown("## Explore Dataset")
@@ -389,7 +391,6 @@ def gradio_interface():
         run_button.click(run_and_plot, inputs=df_state, outputs=[result_text_benchmark, plot_image])
 
     return demo
-
 
 # Initialize W&B
 wandb.login(key=os.getenv("WANDB_API_KEY"))

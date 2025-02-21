@@ -305,9 +305,6 @@ def run_and_plot(df):
 
 # Gradio interface
 
-# Gradio Interface
-
-import gradio as gr
 
 def gradio_interface():
     custom_css = """
@@ -352,6 +349,13 @@ def gradio_interface():
 
         dataset_dropdown = gr.Dropdown(choices=list(DATASET_OPTIONS.keys()), label="Select Dataset")
         load_button = gr.Button("Load Dataset")
+        def update_dataset(selected_dataset):
+            df = load_selected_dataset(selected_dataset)
+            if isinstance(df, str):  # If an error occurs
+
+             return df, None, None  # Return error message and keep df_state unchanged
+            return f"Dataset '{selected_dataset}' loaded successfully.", df, df.head(10)  # Return summary, df_state, and table preview
+
         explore_button = gr.Button("Explore Data")
         df_state = gr.State(None)  # Initialize df_state properly
 
@@ -360,12 +364,7 @@ def gradio_interface():
         explore_image = gr.Image(label="Feature Distributions")
         data_table = gr.Dataframe(label="Dataset Preview")  # Add a Dataframe component to display the table
 
-        def update_dataset(selected_dataset):
-            df = load_selected_dataset(selected_dataset)
-            if isinstance(df, str):  # If an error occurs
-                return df, None, None  # Return error message and keep df_state unchanged
-            return f"Dataset '{selected_dataset}' loaded successfully.", df, df.head(10)  # Return summary, df_state, and table preview
-
+        
         load_button.click(update_dataset, inputs=dataset_dropdown, outputs=[summary_text, df_state, data_table])
 
         # Explore Dataset
